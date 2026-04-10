@@ -1,4 +1,4 @@
-# RFM Analytics System v2
+# RFM Analytics System 
 
 Hệ thống phân tích khách hàng RFM — end-to-end: **PostgreSQL · Prefect · Docker · Streamlit**
 
@@ -13,13 +13,13 @@ Hệ thống phân tích khách hàng RFM — end-to-end: **PostgreSQL · Prefec
                     │
                     ▼
            ┌─────────────────┐
-           │  Prefect Flow   │  lên lịch hàng tháng
-           │  ETL pipeline   │  retry tự động
+           │  Prefect Flow   │  
+           │  ETL pipeline   │  
            └────────┬────────┘
                     │
                     ▼
        ┌────────────────────────┐
-       │      PostgreSQL        │  thay SQLite
+       │      PostgreSQL        │  
        │   Data Warehouse       │
        │                        │
        │  dim_customer          │
@@ -27,8 +27,8 @@ Hệ thống phân tích khách hàng RFM — end-to-end: **PostgreSQL · Prefec
        │  dim_date              │
        │  dim_geography         │
        │  fact_sales            │
-       │  customer_rfm          │  ← kết quả mới nhất
-       │  rfm_snapshot          │  ← lịch sử 13 tháng ★
+       │  customer_rfm          │  
+       │  rfm_snapshot          │  
        │  product_recommendation│
        │  pipeline_log          │
        └────────────────────────┘
@@ -40,7 +40,7 @@ Hệ thống phân tích khách hàng RFM — end-to-end: **PostgreSQL · Prefec
           │ Home              │
           │ Business Overview │
           │ RFM Analysis      │
-          │ Segment History   │  ← stacked area, migration, journey
+          │ Segment History   │  
           │ Recommendations   │
           └──────────────────┘
 ```
@@ -51,41 +51,41 @@ Hệ thống phân tích khách hàng RFM — end-to-end: **PostgreSQL · Prefec
 
 ```
 rfm_v2/
-├── .env.example              ← template biến môi trường
+├── .env.example              
 ├── .gitignore
-├── docker-compose.yml        ← 5 services
+├── docker-compose.yml        
 ├── Dockerfile
 ├── requirements.txt
-├── config.py                 ← cấu hình trung tâm, 13 tháng simulation
+├── config.py                 
 │
 ├── database/
-│   └── init.sql              ← PostgreSQL schema (tự chạy khi start)
+│   └── init.sql              
 │
 ├── etl/
-│   ├── db.py                 ← SQLAlchemy engine, upsert helper
-│   ├── extract.py            ← đọc file + filter_by_month()
-│   ├── transform.py          ← làm sạch, Dim/Fact builders
-│   └── load.py               ← upsert idempotent, pipeline_log
+│   ├── db.py                 
+│   ├── extract.py            
+│   ├── transform.py          
+│   └── load.py               
 │
 ├── analytics/
-│   ├── rfm.py                ← compute_rfm, score, segment, snapshot
-│   └── recommendation.py    ← segment-based scoring, save
+│   ├── rfm.py                
+│   └── recommendation.py    
 │
 ├── flows/
-│   ├── monthly_pipeline.py   ← Prefect tasks + flow (1 tháng + simulation)
-│   └── schedule.py           ← deploy lên Prefect server
+│   ├── monthly_pipeline.py   
+│   └── schedule.py           
 │
 ├── dashboard/
-│   ├── app.py                ← Trang chủ
+│   ├── app.py                
 │   ├── styles.py
 │   └── pages/
 │       ├── 1_Business_Overview.py
 │       ├── 2_RFM_Analysis.py
-│       ├── 3_Segment_History.py   ← MỚI
+│       ├── 3_Segment_History.py   
 │       └── 4_Product_Recommendations.py
 │
 └── tests/
-    └── test_pipeline.py      ← pytest: extract, transform, RFM logic
+    └── test_pipeline.py      
 ```
 
 ---
@@ -95,7 +95,7 @@ rfm_v2/
 ### 1. Clone và cấu hình
 
 ```bash
-git clone <repo-url> && cd rfm_v2
+git clone <repo-url> && cd rfm_system1
 
 # Điền password vào .env
 cp .env.example .env
