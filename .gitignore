@@ -1,0 +1,30 @@
+# Dữ liệu và database — không commit
+data/
+*.db
+*.sqlite
+
+# Biến môi trường
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker volumes (local)
+postgres_data/

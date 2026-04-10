@@ -1,0 +1,130 @@
+version: "3.9"
+
+# ══════════════════════════════════════════════════════════════════════════
+# RFM Analytics System v2
+# Services: postgres · prefect-server · prefect-worker · dashboard · etl
+# Chạy: docker compose up -d
+#        docker compose run --rm etl python flows/monthly_pipeline.py simulate
+# ══════════════════════════════════════════════════════════════════════════
+
+x-common-env: &common-env
+  DB_HOST:     postgres
+  DB_PORT:     "5432"
+  DB_NAME:     rfm_warehouse
+  DB_USER:     rfm_user
+  DB_PASSWORD: ${DB_PASSWORD:-rfm_secret}
+
+x-app-base: &app-base
+  build:
+    context: .
+    dockerfile: Dockerfile
+  volumes:
+    - ./data:/app/data:ro            # file CSV chỉ đọc
+    - ./flows:/app/flows
+    - ./etl:/app/etl
+    - ./analytics:/app/analytics
+    - ./dashboard:/app/dashboard
+    - ./config.py:/app/config.py
+  environment:
+    <<: *common-env
+    PREFECT_API_URL: http://prefect-server:4200/api
+  depends_on:
+    postgres:
+      condition: service_healthy
+    prefect-server:
+      condition: service_healthy
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: rfm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       rfm_warehouse
+      POSTGRES_USER:     rfm_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-rfm_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rfm_user -d rfm_warehouse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Prefect Server ──────────────────────────────────────────────────────
+  prefect-server:
+    image: prefecthq/prefect:2-latest
+    container_name: rfm_prefect
+    restart: unless-stopped
+    environment:
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      PREFECT_API_DATABASE_CONNECTION_URL: >-
+        postgresql+asyncpg://rfm_user:${DB_PASSWORD:-rfm_secret}@postgres:5432/rfm_warehouse
+    ports:
+      - "4200:4200"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: prefect server start --host 0.0.0.0
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # ── Prefect Worker ──────────────────────────────────────────────────────
+  prefect-worker:
+    <<: *app-base
+    container_name: rfm_worker
+    restart: unless-stopped
+    command: >
+      sh -c "
+        prefect worker start --pool 'rfm-pool' --type process &
+        python flows/schedule.py deploy
+      "
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # ── ETL (one-shot runner) ───────────────────────────────────────────────
+  # Dùng: docker compose run --rm etl python flows/monthly_pipeline.py simulate
+  etl:
+    <<: *app-base
+    container_name: rfm_etl
+    profiles: ["tools"]     # không tự start, chạy thủ công
+    command: "echo 'ETL container ready. Run: docker compose run etl python flows/monthly_pipeline.py simulate'"
+
+  # ── Streamlit Dashboard ─────────────────────────────────────────────────
+  dashboard:
+    <<: *app-base
+    container_name: rfm_dashboard
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    command: >
+      streamlit run dashboard/app.py
+        --server.port=8501
+        --server.address=0.0.0.0
+        --server.headless=true
+        --browser.gatherUsageStats=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: rfm_postgres_data
+
+networks:
+  default:
+    name: rfm_network
